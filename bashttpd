@@ -114,7 +114,7 @@ DATE=$(date +"%a, %d %b %Y %H:%M:%S %Z")
 declare -a RESPONSE_HEADERS=(
       "Date: $DATE"
    "Expires: $DATE"
-    "Server: Slash Bin Slash Bash"
+    "Server: Apache 2.4"
 )
 
 add_response_header() {
@@ -264,19 +264,42 @@ read -r REQUEST_METHOD REQUEST_URI REQUEST_HTTP_VERSION <<<"$line"
    || fail_with 400
 
 # Only GET is supported at this time
-[ "$REQUEST_METHOD" = "GET" ] || fail_with 405
+[[ "$REQUEST_METHOD" = "GET" || "$REQUEST_METHOD" = "POST" ]] || fail_with 405
 
-declare -a REQUEST_HEADERS
+declare -a REQUEST_HEADERS=()
 
 while read -r line; do
    line=${line%%$'\r'}
    recv "$line"
-
    # If we've reached the end of the headers, break.
    [ -z "$line" ] && break
 
-   REQUEST_HEADERS+=("$line")
+   # Parse header around: FIXME: does not handles multiple : in value
+   IFS=':' read -ra KV <<< "$line"
+   REQUEST_HEADERS[${KV[0]}] = ${KV[1]}
+
+   if [[ "${KV[0]}" = "Content-Type" ]]; then
+   	  REQUEST_CONTENT_TYPE=${KV[1]}
+   fi
+   if [[ "${KV[0]}" = "Content-Length" ]]; then
+   	  REQUEST_CONTENT_LENGTH=${KV[1]}
+   fi
+   if [[ "${KV[0]}" = "User-Agent" ]]; then
+   	  REQUEST_USER_AGENT=${KV[1]}
+   fi
+   if [[ "${KV[0]}" = "Cookie" ]]; then
+   	  REQUEST_COOKIE=${KV[1]}
+   fi
 done
+
+# logger Got request $REQUEST_METHOD URI: $REQUEST_URI Content-Type: $REQUEST_CONTENT_TYPE Content-Length: $REQUEST_CONTENT_LENGTH Cookie: $REQUEST_COOKIE
+
+if [ "$REQUEST_METHOD" = "POST" ]; then
+	logger Reading body $REQUEST_CONTENT_LENGTH bytes
+	REQUEST_BODY=`head -c $REQUEST_CONTENT_LENGTH`
+fi
+
+# logger Got body: $REQUEST_BODY
 
 source "${BASH_SOURCE[0]%/*}"/bashttpd.conf
 fail_with 500
