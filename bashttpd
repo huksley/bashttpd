@@ -276,7 +276,7 @@ while read -r line; do
 
    # Parse header around: FIXME: does not handles multiple : in value
    IFS=':' read -ra KV <<< "$line"
-   REQUEST_HEADERS[${KV[0]}] = ${KV[1]}
+   REQUEST_HEADERS+=("$line")
 
    if [[ "${KV[0]}" = "Content-Type" ]]; then
    	  REQUEST_CONTENT_TYPE=${KV[1]}
