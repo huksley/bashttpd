@@ -154,6 +154,9 @@ serve_file() {
 
    CONTENT_TYPE=
    case "$file" in
+     *\.html)
+       CONTENT_TYPE="text/html"
+       ;;
      *\.css)
        CONTENT_TYPE="text/css"
        ;;
@@ -167,8 +170,9 @@ serve_file() {
 
    add_response_header "Content-Type"   "$CONTENT_TYPE";
 
+   # Don`t add Content-Length - it is calculated incorrect
    read -r CONTENT_LENGTH < <(stat -c'%s' "$file")         && \
-      add_response_header "Content-Length" "$CONTENT_LENGTH"
+      add_response_header "X-Content-Length" "$CONTENT_LENGTH"
 
    send_response_ok_exit < "$file"
 }
